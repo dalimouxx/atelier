@@ -1,0 +1,116 @@
+# ============================================================================
+# Render — infrastructure décrite en fichier (Blueprint)
+#
+# Déploiement : Render → New → Blueprint → choisir ce dépôt.
+# Tout est créé automatiquement : le service web, la base et le cache.
+#
+# Les variables marquées sync:false sont à renseigner dans l'interface
+# Render après la création — elles ne doivent jamais figurer dans le dépôt.
+# ============================================================================
+
+databases:
+  - name: atelier-db
+    databaseName: atelier
+    user: atelier
+    plan: free          # passer à "basic-256mb" dès la mise en production
+    postgresMajorVersion: "16"
+
+services:
+  # --------------------------------------------------------------------------
+  # Service web : API + interface + worker dans un seul processus
+  # --------------------------------------------------------------------------
+  - type: web
+    name: atelier
+    runtime: node
+    plan: free          # le plan gratuit s'endort après 15 min d'inactivité
+    region: frankfurt   # le plus proche de la Tunisie
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm run migrate:prod -- --seed && npm start
+    healthCheckPath: /healthz
+    autoDeploy: true
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      - key: DATABASE_URL
+        fromDatabase:
+          name: atelier-db
+          property: connectionString
+
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: atelier-cache
+          property: connectionString
+
+      # Généré par Render à la création, puis jamais modifié : le changer
+      # déconnecte toutes les sessions en cours.
+      - key: JWT_SECRET
+        generateValue: true
+
+      # Secret du hachage des codes — réservé pour la reprise éventuelle
+      # des cartes à gratter.
+      - key: CODE_PEPPER
+        generateValue: true
+
+      # À remplacer par l'URL réelle du service après le premier déploiement.
+      # Konnect s'en sert pour les retours de paiement et le webhook.
+      - key: PUBLIC_BASE_URL
+        sync: false
+
+      # ---- Stockage ---------------------------------------------------------
+      # Le disque de Render est éphémère : sans S3/R2, les fichiers produits
+      # disparaissent à chaque redéploiement. Indispensable en production.
+      - key: STORAGE_DRIVER
+        value: s3
+      - key: S3_ENDPOINT
+        sync: false     # ex. https://<compte>.r2.cloudflarestorage.com
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: S3_REGION
+        value: auto
+
+      # ---- Fournisseurs d'IA ------------------------------------------------
+      # Tous facultatifs. Sans aucune clé, le mode démonstration reste actif
+      # et la plateforme est pleinement navigable.
+      - key: BYTEPLUS_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: FAL_API_KEY
+        sync: false
+
+      # ---- Paiement par carte (Konnect) -------------------------------------
+      - key: KONNECT_API_KEY
+        sync: false
+      - key: KONNECT_WALLET_ID
+        sync: false
+      - key: KONNECT_BASE_URL
+        value: https://api.konnect.network/api/v2
+
+      # ---- Règles métier ----------------------------------------------------
+      - key: SIGNUP_BONUS_CREDITS
+        value: "100"
+      - key: WORKER_CONCURRENCY
+        value: "10"
+      - key: DEDUP_ENABLED
+        value: "true"
+      - key: MAX_BATCH_ROWS
+        value: "500"
+      - key: MAX_UPLOAD_MB
+        value: "15"
+
+  # --------------------------------------------------------------------------
+  # Redis — file d'attente des travaux
+  # --------------------------------------------------------------------------
+  - type: keyvalue
+    name: atelier-cache
+    plan: free
+    region: frankfurt
+    maxmemoryPolicy: noeviction   # obligatoire : une file ne doit rien perdre
+    ipAllowList: []               # accès interne uniquement
