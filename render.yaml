@@ -36,8 +36,15 @@ services:
       - key: NODE_ENV
         value: production
 
-      # Chaîne de connexion de la base externe. Chez Neon, prendre la
-      # chaîne "pooled" et y ajouter ?sslmode=require.
+      # Chaîne de connexion de la base externe.
+      #
+      # Chez Neon, prendre la chaîne DIRECTE, pas la "pooled" : celle-ci
+      # passe par PgBouncer en mode transaction, où les verrous consultatifs
+      # de session (pg_try_advisory_lock) ne survivent pas d'une requête à
+      # l'autre. Les tâches planifiées se bloqueraient en silence et des
+      # réservations de crédits resteraient gelées.
+      # L'hôte correct ne contient PAS le segment "-pooler".
+      # Terminer la chaîne par ?sslmode=require.
       - key: DATABASE_URL
         sync: false
 
