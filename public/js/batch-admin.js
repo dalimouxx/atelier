@@ -86,10 +86,10 @@ export async function batchPage(batchId) {
 
 function batchChip(s) {
   return {
-    running: '<span class="chip c-blue">en cours</span>',
-    paused: '<span class="chip c-ocre">suspendu</span>',
-    done: '<span class="chip c-green">terminé</span>',
-    cancelled: '<span class="chip c-gray">annulé</span>',
+    running: '<span class="chip c-bleu">en cours</span>',
+    paused: '<span class="chip c-jasmin">suspendu</span>',
+    done: '<span class="chip c-menthe">terminé</span>',
+    cancelled: '<span class="chip c-gris">annulé</span>',
   }[s] ?? esc(s);
 }
 
@@ -104,7 +104,7 @@ async function loadCsv(f) {
     lot.columns = out.columns; lot.rows = out.rows;
 
     $('#csvinfo').innerHTML = `
-      <div class="alert a-green">
+      <div class="alert a-menthe">
         <span>✓</span>
         <div><b>${out.rowCount} lignes lues.</b><br>
         Colonnes : ${out.columns.map((c) => esc(c)).join(', ')}</div>
@@ -112,7 +112,7 @@ async function loadCsv(f) {
     renderMapping();
   } catch (e) {
     err(e);
-    $('#csvinfo').innerHTML = `<div class="alert a-red"><span>◇</span><div>${esc(e.message)}</div></div>`;
+    $('#csvinfo').innerHTML = `<div class="alert a-grenade"><span>◇</span><div>${esc(e.message)}</div></div>`;
   }
 }
 
@@ -156,7 +156,7 @@ function renderMapping() {
         <b class="num" style="${assez ? '' : 'color:var(--red)'}">${credits(state.balance.spendable)}</b></div>
     </div>
 
-    ${!assez ? `<div class="alert a-ocre" style="margin-bottom:14px"><span>◇</span>
+    ${!assez ? `<div class="alert a-jasmin" style="margin-bottom:14px"><span>◇</span>
       <div>Votre solde ne couvre pas tout le lot. Le traitement s'arrêtera de
       lui-même quand les crédits seront épuisés, sans rien facturer de plus.</div></div>` : ''}
 
@@ -219,10 +219,10 @@ async function batchDetail(id) {
         <div class="card pad">
           <h2 style="margin-bottom:12px">Avancement</h2>
           <table>
-            <tr><td>Terminées</td><td class="right"><span class="chip c-green">${c.succeeded ?? 0}</span></td></tr>
-            <tr><td>En cours</td><td class="right"><span class="chip c-blue">${c.running ?? 0}</span></td></tr>
-            <tr><td>En file</td><td class="right"><span class="chip c-gray">${c.queued ?? 0}</span></td></tr>
-            <tr><td>Échouées · remboursées</td><td class="right"><span class="chip c-red">${c.failed ?? 0}</span></td></tr>
+            <tr><td>Terminées</td><td class="right"><span class="chip c-menthe">${c.succeeded ?? 0}</span></td></tr>
+            <tr><td>En cours</td><td class="right"><span class="chip c-bleu">${c.running ?? 0}</span></td></tr>
+            <tr><td>En file</td><td class="right"><span class="chip c-gris">${c.queued ?? 0}</span></td></tr>
+            <tr><td>Échouées · remboursées</td><td class="right"><span class="chip c-grenade">${c.failed ?? 0}</span></td></tr>
           </table>
           <div class="bar" style="margin-top:14px;height:6px"><i style="width:${b.progress}%"></i></div>
           <p class="dim" style="font-size:12px;margin-top:7px">${b.progress}% · ${batchChip(b.status)}</p>
@@ -337,7 +337,7 @@ export async function adminMargin() {
           <th class="right">Coût réel</th><th class="right">Multiple</th></tr></thead>
         <tbody>${data.parApp.length ? data.parApp.map((r) => {
           const m = multiple(r.credits_encaisses, r.cout_micros);
-          const cls = !m ? 'c-gray' : m < 1.8 ? 'c-red' : m < 2.5 ? 'c-ocre' : 'c-green';
+          const cls = !m ? 'c-gris' : m < 1.8 ? 'c-grenade' : m < 2.5 ? 'c-jasmin' : 'c-menthe';
           return `<tr>
             <td><b>${esc(r.titre ?? r.app_id)}</b><br><small class="dim">${esc(r.app_id)}</small></td>
             <td class="right num">${r.generations}</td>
@@ -357,8 +357,8 @@ export async function adminMargin() {
         <table>${health.fournisseurs.map((p) => `<tr>
           <td>${esc(p.name)}</td>
           <td class="right">${p.disponible
-            ? '<span class="chip c-green">disponible</span>'
-            : `<span class="chip c-red">écarté (${p.echecs} échecs)</span>`}</td>
+            ? '<span class="chip c-menthe">disponible</span>'
+            : `<span class="chip c-grenade">écarté (${p.echecs} échecs)</span>`}</td>
         </tr>`).join('')}</table>
       </div>
       <div class="card pad">
@@ -368,17 +368,17 @@ export async function adminMargin() {
             <span class="dim">(${health.file.waiting} en file, ${health.file.active} actifs)</span></td></tr>
           <tr><td>Stockage</td><td class="right">${esc(health.stockage)}</td></tr>
           <tr><td>Paiement carte</td><td class="right">${health.paiementCarte
-            ? '<span class="chip c-green">configuré</span>'
-            : '<span class="chip c-ocre">non configuré</span>'}</td></tr>
+            ? '<span class="chip c-menthe">configuré</span>'
+            : '<span class="chip c-jasmin">non configuré</span>'}</td></tr>
           <tr><td>Écarts comptables</td><td class="right">${health.ecartsLedger.length
-            ? `<span class="chip c-red">${health.ecartsLedger.length} compte(s)</span>`
-            : '<span class="chip c-green">aucun</span>'}</td></tr>
+            ? `<span class="chip c-grenade">${health.ecartsLedger.length} compte(s)</span>`
+            : '<span class="chip c-menthe">aucun</span>'}</td></tr>
         </table>
       </div>
     </div>
 
     ${totMult && totMult < 2.5 ? `
-      <div class="alert a-ocre" style="margin-top:20px"><span>◇</span>
+      <div class="alert a-jasmin" style="margin-top:20px"><span>◇</span>
         <div><b>Le multiple moyen est sous l'objectif.</b> Les applications en rouge
         travaillent à perte relative. Deux leviers : relever leur coût en crédits,
         ou les garder en produit d'appel et laisser les autres porter la marge.</div>

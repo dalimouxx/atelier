@@ -40,7 +40,7 @@ export async function dashboard() {
     </div>
 
     ${bal.spendable < 50 ? `
-      <div class="alert a-ocre" style="margin-bottom:20px">
+      <div class="alert a-jasmin" style="margin-bottom:20px">
         <span>◇</span>
         <div><b>Votre solde est bas.</b> Il vous reste ${credits(bal.spendable)} crédits,
         de quoi produire environ ${Math.floor(bal.spendable / 5)} visuels.
@@ -50,7 +50,7 @@ export async function dashboard() {
     <div class="between" style="margin-bottom:13px">
       <h2>Production récente</h2>
       <div class="row" style="gap:8px">
-        ${running.length ? `<span class="chip c-blue">${running.length} en cours</span>` : ''}
+        ${running.length ? `<span class="chip c-bleu">${running.length} en cours</span>` : ''}
         <button class="btn btn-s" data-go="apps">Nouvelle production</button>
       </div>
     </div>
@@ -68,13 +68,13 @@ export async function dashboard() {
 function tile(j) {
   const chips = {
     succeeded: j.served_from_cache
-      ? '<span class="chip c-blue">cache · 0 cr</span>'
-      : `<span class="chip c-green">${j.credit_cost} cr</span>`,
-    failed: '<span class="chip c-red">remboursé</span>',
-    queued: '<span class="chip c-gray">en file</span>',
-    running: '<span class="chip c-blue">en cours</span>',
-    cancelled: '<span class="chip c-gray">annulé</span>',
-    blocked: '<span class="chip c-red">refusé</span>',
+      ? '<span class="chip c-bleu">cache · 0 cr</span>'
+      : `<span class="chip c-menthe">${j.credit_cost} cr</span>`,
+    failed: '<span class="chip c-grenade">remboursé</span>',
+    queued: '<span class="chip c-gris">en file</span>',
+    running: '<span class="chip c-bleu">en cours</span>',
+    cancelled: '<span class="chip c-gris">annulé</span>',
+    blocked: '<span class="chip c-grenade">refusé</span>',
   };
   return `
     <article class="tile" data-job="${esc(j.id)}" style="cursor:pointer">
@@ -117,19 +117,24 @@ export async function apps() {
 }
 
 function appCard(a) {
-  const badge = { image: 'c-blue', video: 'c-ocre', text: 'c-gray' }[a.modality];
+  // La teinte dit la modalité, partout dans le site : bleu pour l'image,
+  // figue pour la vidéo, menthe pour le texte.
+  const teinte = { image: 'c-bleu', video: 'c-figue', text: 'c-menthe' }[a.modality];
+  const bord = { image: '', video: 'm-video', text: 'm-texte' }[a.modality];
   const label = { image: 'Image', video: 'Vidéo', text: 'Texte' }[a.modality];
   return `
-    <button class="app" data-app="${esc(a.id)}">
-      <div class="between" style="align-items:flex-start">
-        <h3>${esc(t(a.title, a.id))}</h3>
-        <span class="chip ${badge}">${label}</span>
-      </div>
-      <p>${esc(t(a.description, ''))}</p>
-      <div class="app-f">
-        <span class="chip ${a.credit_cost > 20 ? 'c-ocre' : 'c-green'}">${a.credit_cost} crédits</span>
-        <span class="dim" style="font-size:12px">~${a.est_seconds < 60
-          ? a.est_seconds + ' s' : Math.round(a.est_seconds / 60) + ' min'}</span>
+    <button class="app ${bord}" data-app="${esc(a.id)}">
+      <div class="corps">
+        <div class="between" style="align-items:flex-start">
+          <h3>${esc(t(a.title, a.id))}</h3>
+          <span class="chip ${teinte}">${label}</span>
+        </div>
+        <p>${esc(t(a.description, ''))}</p>
+        <div class="app-f">
+          <span class="chip ${teinte}">${a.credit_cost} crédits</span>
+          <span class="dim" style="font-size:13px">environ ${a.est_seconds < 60
+            ? a.est_seconds + ' s' : Math.round(a.est_seconds / 60) + ' min'}</span>
+        </div>
       </div>
     </button>`;
 }
@@ -196,7 +201,7 @@ export async function generator(appId) {
       <div class="canvas">
         <div class="canvas-h">
           <h2 style="font-size:14px">Rendu</h2>
-          <span id="genstatus" class="chip c-gray">en attente</span>
+          <span id="genstatus" class="chip c-gris">en attente</span>
         </div>
         <div class="out" id="genout">
           <div class="dim" style="text-align:center">
@@ -344,7 +349,7 @@ function pollJob(jobId, startedAt) {
   const out = $('#genout'), status = $('#genstatus'), time = $('#gentime');
   out.innerHTML = '<div style="text-align:center"><div class="spin"></div>'
                 + '<div class="dim">Génération en cours…</div></div>';
-  status.className = 'chip c-blue'; status.textContent = 'en cours';
+  status.className = 'chip c-bleu'; status.textContent = 'en cours';
 
   if (gen.timer) clearInterval(gen.timer);
   gen.timer = setInterval(async () => {
@@ -355,7 +360,7 @@ function pollJob(jobId, startedAt) {
 
       if (j.status === 'succeeded') {
         clearInterval(gen.timer); gen.timer = null;
-        status.className = 'chip c-green'; status.textContent = 'terminé';
+        status.className = 'chip c-menthe'; status.textContent = 'terminé';
 
         if (j.output_text) {
           out.innerHTML = `<pre class="result">${esc(formatText(j.output_text))}</pre>`;
@@ -377,8 +382,8 @@ function pollJob(jobId, startedAt) {
 
       } else if (['failed', 'cancelled', 'blocked'].includes(j.status)) {
         clearInterval(gen.timer); gen.timer = null;
-        status.className = 'chip c-red'; status.textContent = 'échec';
-        out.innerHTML = `<div class="alert a-red" style="max-width:420px">
+        status.className = 'chip c-grenade'; status.textContent = 'échec';
+        out.innerHTML = `<div class="alert a-grenade" style="max-width:420px">
           <span>◇</span><div><b>La génération n'a pas abouti.</b><br>
           ${esc(j.error_message ?? j.error_code ?? 'Erreur inconnue')}<br>
           <span class="dim">Vos crédits ont été rendus.</span></div></div>`;
@@ -462,7 +467,7 @@ export async function brands() {
       <div class="card pad">
         <div class="between" style="margin-bottom:12px">
           <h2>${esc(b.name)}</h2>
-          ${b.is_default ? '<span class="chip c-green">par défaut</span>' : ''}
+          ${b.is_default ? '<span class="chip c-menthe">par défaut</span>' : ''}
         </div>
         <div class="pal" style="margin-bottom:12px">
           ${(b.palette ?? []).map((c) => `<div class="sw" style="background:${esc(c)}"></div>`).join('')
@@ -574,7 +579,7 @@ export async function creditsPage() {
     </div>
 
     ${!railAvailable ? `
-      <div class="alert a-ocre" style="margin-bottom:20px">
+      <div class="alert a-jasmin" style="margin-bottom:20px">
         <span>◇</span>
         <div><b>Le paiement par carte n'est pas encore activé sur cette installation.</b>
         Renseignez KONNECT_API_KEY et KONNECT_WALLET_ID pour ouvrir la vente.</div>
@@ -637,11 +642,11 @@ export async function creditsPage() {
 
 function payChip(s) {
   const m = {
-    paid: '<span class="chip c-green">payé</span>',
-    pending: '<span class="chip c-ocre">en attente</span>',
-    failed: '<span class="chip c-red">échoué</span>',
-    expired: '<span class="chip c-gray">expiré</span>',
-    refunded: '<span class="chip c-gray">remboursé</span>',
+    paid: '<span class="chip c-menthe">payé</span>',
+    pending: '<span class="chip c-jasmin">en attente</span>',
+    failed: '<span class="chip c-grenade">échoué</span>',
+    expired: '<span class="chip c-gris">expiré</span>',
+    refunded: '<span class="chip c-gris">remboursé</span>',
   };
   return m[s] ?? esc(s);
 }

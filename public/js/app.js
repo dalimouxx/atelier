@@ -9,6 +9,7 @@ import {
   dashboard, apps, generator, library, brands, creditsPage, history,
 } from './views.js';
 import { batchPage, adminMargin } from './batch-admin.js';
+import { landing } from './landing.js';
 
 const root = () => document.getElementById('root');
 
@@ -40,10 +41,9 @@ function gate(mode = 'login') {
 
   root().innerHTML = `
     <div class="gate"><div class="gate-box">
-      <div class="gate-brand">
-        <div class="mark">A</div>
-        <div><b>Atelier</b><span>Visuels produit pour l'e-commerce</span></div>
-      </div>
+      <button class="gate-brand" data-accueil style="width:100%">
+        <span class="mark">A</span> Atelier
+      </button>
 
       <div class="gate-card">
         <h1>${isSignup ? 'Créer un compte' : 'Connexion'}</h1>
@@ -80,9 +80,13 @@ function gate(mode = 'login') {
           ? 'Vous avez déjà un compte ? <a href="#" data-mode="login">Se connecter</a>'
           : 'Pas encore de compte ? <a href="#" data-mode="signup">En créer un</a>'}
       </p>
+      <p class="gate-switch"><a href="#" data-accueil>Retour à l'accueil</a></p>
     </div></div>`;
 
   $('[data-mode]').onclick = (e) => { e.preventDefault(); gate(e.target.dataset.mode); };
+  $$('[data-accueil]').forEach((b) => b.onclick = (e) => {
+    e.preventDefault(); location.hash = ''; showLanding();
+  });
 
   $('#gateform').onsubmit = async (e) => {
     e.preventDefault();
@@ -143,13 +147,10 @@ function shell() {
         <header class="top">
           <h1 id="crumb">Tableau de bord</h1>
           <div class="wallet">
-            <div>
-              <div class="row" style="gap:7px">
-                <b id="bal" class="num">${credits(state.balance.spendable)}</b>
-                <small>crédits</small>
-              </div>
-              <div class="gauge"><i id="gauge" style="width:60%"></i></div>
-            </div>
+            <span class="sol">
+              <b id="bal" class="num">${credits(state.balance.spendable)}</b>
+              <small>crédits</small>
+            </span>
             <button class="btn btn-s btn-p" data-go="credits">Recharger</button>
           </div>
         </header>
@@ -291,6 +292,14 @@ async function billingReturn(params) {
 }
 
 // ---------------------------------------------------------------------------
+/** Page publique : vitrine, puis inscription ou connexion à la demande. */
+async function showLanding() {
+  await landing(root());
+  root().querySelectorAll('[data-auth]').forEach((b) => {
+    b.onclick = () => gate(b.dataset.auth);
+  });
+}
+
 async function boot() {
   try {
     const me = await api('/auth/me');
@@ -300,8 +309,13 @@ async function boot() {
     shell();
     await render();
   } catch (e) {
-    if (e.status === 401) gate('login');
-    else {
+    if (e.status === 401) {
+      // Un lien direct vers une page de l'outil mène à la connexion ;
+      // une arrivée sur la racine mène à la vitrine.
+      const r = readRoute();
+      if (location.hash && r.route !== 'dash') gate('login');
+      else await showLanding();
+    } else {
       root().innerHTML = `<div class="gate"><div class="gate-box">
         <div class="card pad empty"><b>Service indisponible</b>
         <p>${esc(e.message)}</p></div></div></div>`;
