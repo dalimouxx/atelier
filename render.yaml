@@ -8,12 +8,15 @@
 # Render après la création — elles ne doivent jamais figurer dans le dépôt.
 # ============================================================================
 
-databases:
-  - name: atelier-db
-    databaseName: atelier
-    user: atelier
-    plan: free          # passer à "basic-256mb" dès la mise en production
-    postgresMajorVersion: "16"
+# ============================================================================
+# Base de données : externe (Neon, Supabase ou Render payant).
+#
+# Le palier gratuit de Render n'autorise qu'une seule base par espace de
+# travail, et celle-ci expire au bout de 30 jours. Une base externe laisse
+# l'existante intacte et n'a pas de date de péremption.
+#
+# Renseigner DATABASE_URL dans les variables du service après création.
+# ============================================================================
 
 services:
   # --------------------------------------------------------------------------
@@ -33,16 +36,17 @@ services:
       - key: NODE_ENV
         value: production
 
+      # Chaîne de connexion de la base externe. Chez Neon, prendre la
+      # chaîne "pooled" et y ajouter ?sslmode=require.
       - key: DATABASE_URL
-        fromDatabase:
-          name: atelier-db
-          property: connectionString
+        sync: false
 
+      # Facultatif. Sans Redis, la file bascule en mémoire : utilisable pour
+      # un test, mais les travaux en attente sont perdus au redémarrage (les
+      # crédits gelés correspondants expirent et sont rendus au client).
+      # À brancher avant la mise en service réelle.
       - key: REDIS_URL
-        fromService:
-          type: keyvalue
-          name: atelier-cache
-          property: connectionString
+        sync: false
 
       # Généré par Render à la création, puis jamais modifié : le changer
       # déconnecte toutes les sessions en cours.
@@ -104,13 +108,3 @@ services:
         value: "500"
       - key: MAX_UPLOAD_MB
         value: "15"
-
-  # --------------------------------------------------------------------------
-  # Redis — file d'attente des travaux
-  # --------------------------------------------------------------------------
-  - type: keyvalue
-    name: atelier-cache
-    plan: free
-    region: frankfurt
-    maxmemoryPolicy: noeviction   # obligatoire : une file ne doit rien perdre
-    ipAllowList: []               # accès interne uniquement
