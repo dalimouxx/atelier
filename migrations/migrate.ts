@@ -6,11 +6,40 @@
  *   npm run seed             -- applique le schéma puis les données de départ
  *   npm run migrate -- --reset  -- supprime tout et recommence (dev uniquement)
  */
-import { readFileSync, readdirSync } from 'fs';
+import { readFileSync, readdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import { Pool } from 'pg';
 
-const DIR = __dirname;
+/**
+ * Où trouver les fichiers .sql.
+ *
+ * tsc ne compile que le TypeScript : les .sql ne sont jamais copiés dans
+ * dist/. Une fois compilé, __dirname vaut dist/migrations, qui ne contient
+ * que du .js. On cherche donc d'abord le dossier source.
+ *
+ * Sans ce correctif le script ne trouvait aucun fichier, affichait
+ * « migrations terminées » et sortait avec le code 0 — laissant une base
+ * entièrement vide derrière un démarrage réussi.
+ */
+const CANDIDATS = [
+  join(process.cwd(), 'migrations'),
+  __dirname,
+  join(__dirname, '..', '..', 'migrations'),
+];
+
+function trouverDossier(): string {
+  const d = CANDIDATS.find((c) => existsSync(join(c, '001_schema.sql')));
+  if (!d) {
+    console.error(
+      'Aucun fichier de migration trouvé. Dossiers examinés :\n' +
+      CANDIDATS.map((c) => '  - ' + c).join('\n'),
+    );
+    process.exit(1);
+  }
+  return d;
+}
+
+const DIR = trouverDossier();
 
 async function main() {
   const reset = process.argv.includes('--reset');
@@ -43,6 +72,13 @@ async function main() {
     .filter((f) => f.endsWith('.sql'))
     .filter((f) => (seed ? true : !f.includes('seed')))
     .sort();
+
+  // Un lot vide n'est jamais un succès : mieux vaut un démarrage qui échoue
+  // bruyamment qu'un serveur en ligne devant une base sans tables.
+  if (!files.length) {
+    throw new Error(`Aucun fichier .sql dans ${DIR}`);
+  }
+  console.log(`· ${files.length} fichier(s) trouvé(s) dans ${DIR}`);
 
   for (const file of files) {
     const isSeed = file.includes('seed');

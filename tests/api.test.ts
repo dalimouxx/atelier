@@ -42,12 +42,16 @@ before(async () => {
   const health = await call('/healthz');
   assert.equal(health.status, 200, `le serveur doit tourner sur ${BASE}`);
 
-  // Les compteurs de débit sont persistés : sans remise à zéro, relancer
-  // la suite plusieurs fois de suite déclenche la limitation et fait
-  // échouer des tests qui portent sur autre chose.
-  const { pool } = await import('../src/db');
-  await pool.query("DELETE FROM rate_events WHERE bucket IN ('signup','login')");
-  await pool.end();
+  // Les compteurs de débit sont persistés en base. Quand la suite tourne
+  // contre une instance locale on les remet à zéro ; contre une instance
+  // distante la base n'est pas joignable d'ici, et on s'en passe.
+  if (!process.env.TEST_BASE) {
+    try {
+      const { pool } = await import('../src/db');
+      await pool.query("DELETE FROM rate_events WHERE bucket IN ('signup','login')");
+      await pool.end();
+    } catch { /* base locale absente : sans effet sur les tests */ }
+  }
 });
 
 describe('authentification', () => {
