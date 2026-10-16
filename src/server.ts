@@ -86,9 +86,21 @@ if (!PUBLIC) {
   console.error("Dossier public/ introuvable — l'interface ne sera pas servie");
 }
 if (PUBLIC) {
-  app.use(express.static(PUBLIC, { maxAge: isProd ? '1h' : 0, index: false }));
+  // Les fichiers ne portent pas d'empreinte dans leur nom : les mettre en
+  // cache une heure rendrait chaque déploiement invisible aux visiteurs
+  // déjà venus. On force la revalidation ; l'ETag renvoie un 304 vide
+  // quand rien n'a changé, donc le coût est négligeable.
+  app.use(express.static(PUBLIC, {
+    index: false,
+    etag: true,
+    lastModified: true,
+    setHeaders(res) {
+      res.setHeader('Cache-Control', 'no-cache');
+    },
+  }));
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/files')) return next();
+    res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(join(PUBLIC, 'index.html'));
   });
 }
